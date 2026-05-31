@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SERVISUS Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        :root { --primary:#0B1E3D; --accent:#C85A1A; --bg:#F8F7F4; --white:#fff; --text:#1a1a1a; --text-light:#6b7280; --green:#10b981; --yellow:#f59e0b; --blue:#3b82f6; --red:#ef4444; }
+        body { font-family:'DM Sans',sans-serif; background:#f1f5f9; color:var(--text); }
+        h1,h2,h3 { font-family:'Barlow Condensed',sans-serif; }
+
+        /* Login Screen */
+        .login-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--primary); }
+        .login-box { background:var(--white); padding:48px; border-radius:16px; width:100%; max-width:400px; text-align:center; }
+        .login-box h2 { color:var(--primary); margin-bottom:8px; font-size:1.8rem; }
+        .login-box p { color:var(--text-light); margin-bottom:24px; }
+        .login-box input { width:100%; padding:14px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:12px; font-size:1rem; }
+        .login-box button { width:100%; padding:14px; background:var(--accent); color:white; border:none; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer; font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; letter-spacing:0.05em; }
+        .login-box button:hover { background:#e07a3a; }
+        .login-error { color:var(--red); font-size:0.9rem; margin-top:8px; display:none; }
+
+        /* Dashboard */
+        .dashboard { display:none; }
+        .dash-header { background:var(--primary); color:white; padding:20px 32px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
+        .dash-header h1 { font-size:1.5rem; }
+        .dash-header .dash-actions { display:flex; gap:12px; align-items:center; }
+        .dash-header button, .dash-header a { padding:8px 20px; border-radius:8px; border:none; cursor:pointer; font-size:0.9rem; font-weight:600; }
+        .btn-logout { background:rgba(255,255,255,0.1); color:white; text-decoration:none; }
+        .btn-export { background:var(--accent); color:white; }
+
+        /* Stats */
+        .dash-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; padding:24px 32px; }
+        .dash-stat { background:white; padding:24px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+        .dash-stat-label { font-size:0.85rem; color:var(--text-light); text-transform:uppercase; letter-spacing:0.05em; }
+        .dash-stat-value { font-family:'Barlow Condensed',sans-serif; font-size:2.5rem; font-weight:800; margin-top:4px; }
+        .dash-stat-value.blue { color:var(--blue); }
+        .dash-stat-value.green { color:var(--green); }
+        .dash-stat-value.yellow { color:var(--yellow); }
+        .dash-stat-value.accent { color:var(--accent); }
+
+        /* Filters */
+        .dash-filters { padding:0 32px 16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+        .dash-filters select, .dash-filters input { padding:10px 16px; border:1px solid #e2e8f0; border-radius:8px; font-size:0.9rem; background:white; }
+        .dash-filters label { font-weight:600; font-size:0.9rem; color:var(--text-light); }
+
+        /* Table */
+        .dash-table-wrap { padding:0 32px 32px; overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+        th { background:var(--primary); color:white; padding:14px 16px; text-align:left; font-family:'Barlow Condensed',sans-serif; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; }
+        td { padding:12px 16px; border-bottom:1px solid #f1f5f9; font-size:0.9rem; vertical-align:middle; }
+        tr:hover td { background:#f8fafc; }
+        .status-badge { padding:4px 12px; border-radius:50px; font-size:0.8rem; font-weight:600; display:inline-block; }
+        .status-New { background:#eff6ff; color:var(--blue); }
+        .status-Contacted { background:#fef9c3; color:#92400e; }
+        .status-Booked { background:#d1fae5; color:#065f46; }
+        .status-Completed { background:#e2e8f0; color:#475569; }
+        select.status-select { padding:6px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem; cursor:pointer; }
+        .delete-btn { background:none; border:none; color:var(--red); cursor:pointer; font-size:1.1rem; padding:4px 8px; }
+        .empty-state { text-align:center; padding:60px; color:var(--text-light); }
+        .empty-state h3 { font-size:1.5rem; margin-bottom:8px; color:var(--primary); }
+
+        @media(max-width:768px) {
+            .dash-stats { grid-template-columns:1fr 1fr; }
+            .dash-header { flex-direction:column; gap:12px; text-align:center; }
+            .dash-filters { flex-direction:column; }
+        }
+        @media(max-width:480px) { .dash-stats { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+    <!-- LOGIN -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h2>SERVISUS Admin</h2>
+            <p>Enter your credentials to access the dashboard</p>
+            <input type="text" id="loginUser" placeholder="Username" value="admin">
+            <input type="password" id="loginPass" placeholder="Password">
+            <button onclick="login()">Sign In</button>
+            <div class="login-error" id="loginError">Invalid credentials. Try admin / admin123</div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="dashboard" id="dashboard">
+        <div class="dash-header">
+            <h1>📊 SERVISUS Dashboard</h1>
+            <div class="dash-actions">
+                <button class="btn-export" onclick="exportCSV()">📥 Export CSV</button>
+                <a href="index.html" class="btn-logout">← Back to Site</a>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="dash-stats">
+            <div class="dash-stat">
+                <div class="dash-stat-label">Total Enquiries</div>
+                <div class="dash-stat-value blue" id="statTotal">0</div>
+            </div>
+            <div class="dash-stat">
+                <div class="dash-stat-label">New</div>
+                <div class="dash-stat-value accent" id="statNew">0</div>
+            </div>
+            <div class="dash-stat">
+                <div class="dash-stat-label">Booked</div>
+                <div class="dash-stat-value green" id="statBooked">0</div>
+            </div>
+            <div class="dash-stat">
+                <div class="dash-stat-label">Completed</div>
+                <div class="dash-stat-value yellow" id="statCompleted">0</div>
+            </div>
+        </div>
+
+        <div class="dash-filters">
+            <label>Filter by Service:</label>
+            <select id="filterService" onchange="renderTable()">
+                <option value="all">All Services</option>
+                <option>Full Vehicle Service & Maintenance</option>
+                <option>ECU Tuning</option>
+                <option>Pre-Purchase Inspection (PPI)</option>
+                <option>Paint Protection Film (PPF)</option>
+                <option>Diagnostics & Fault Code Clearing</option>
+                <option>Transmission & Gearbox Service</option>
+                <option>Brake & Suspension Systems</option>
+                <option>Air Conditioning Service</option>
+            </select>
+            <label>Status:</label>
+            <select id="filterStatus" onchange="renderTable()">
+                <option value="all">All Status</option>
+                <option>New</option>
+                <option>Contacted</option>
+                <option>Booked</option>
+                <option>Completed</option>
+            </select>
+        </div>
+
+        <div class="dash-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Car</th>
+                        <th>Service</th>
+                        <th>Pref. Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+            <div class="empty-state" id="emptyState" style="display:none;">
+                <h3>No enquiries yet</h3>
+                <p>Bookings and quote requests from the website will appear here.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'servisus_bookings';
+        const CREDENTIALS = { username: 'admin', password: 'admin123' };
+
+        // Check session
+        if (sessionStorage.getItem('servisus_admin') === 'true') {
+            showDashboard();
+        }
+
+        function login() {
+            const user = document.getElementById('loginUser').value;
+            const pass = document.getElementById('loginPass').value;
+            if (user === CREDENTIALS.username && pass === CREDENTIALS.password) {
+                sessionStorage.setItem('servisus_admin', 'true');
+                showDashboard();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('servisus_admin');
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+        }
+
+        function showDashboard() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            renderTable();
+        }
+
+        function getData() {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        function saveData(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function renderTable() {
+            const data = getData();
+            const filterService = document.getElementById('filterService').value;
+            const filterStatus = document.getElementById('filterStatus').value;
+
+            let filtered = data;
+            if (filterService !== 'all') filtered = filtered.filter(d => d.service === filterService);
+            if (filterStatus !== 'all') filtered = filtered.filter(d => d.status === filterStatus);
+
+            // Stats
+            document.getElementById('statTotal').textContent = data.length;
+            document.getElementById('statNew').textContent = data.filter(d => d.status === 'New').length;
+            document.getElementById('statBooked').textContent = data.filter(d => d.status === 'Booked').length;
+            document.getElementById('statCompleted').textContent = data.filter(d => d.status === 'Completed').length;
+
+            const tbody = document.getElementById('tableBody');
+            const empty = document.getElementById('emptyState');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+
+            tbody.innerHTML = filtered.map((item, i) => `
+                <tr>
+                    <td>${new Date(item.date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'})}</td>
+                    <td>${item.type === 'enquiry' ? '💬 Enquiry' : '📅 Booking'}</td>
+                    <td><strong>${item.name || '—'}</strong></td>
+                    <td>${item.phone || '—'}</td>
+                    <td>${item.carMake ? item.carMake + ' ' + (item.carModel || '') : (item.car || '—')}</td>
+                    <td>${item.service || '—'}</td>
+                    <td>${item.preferredDate || '—'}</td>
+                    <td>
+                        <select class="status-select" onchange="updateStatus(${item.id}, this.value)">
+                            ${['New','Contacted','Booked','Completed'].map(s => `<option ${item.status===s?'selected':''}>${s}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td><button class="delete-btn" onclick="deleteItem(${item.id})">🗑</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function updateStatus(id, status) {
+            const data = getData();
+            const item = data.find(d => d.id === id);
+            if (item) { item.status = status; saveData(data); renderTable(); }
+        }
+
+        function deleteItem(id) {
+            if (!confirm('Delete this entry?')) return;
+            const data = getData().filter(d => d.id !== id);
+            saveData(data);
+            renderTable();
+        }
+
+        function exportCSV() {
+            const data = getData();
+            if (!data.length) return alert('No data to export');
+            const headers = ['Date','Type','Name','Phone','Email','Car Make','Car Model','Year','Service','Preferred Date','Notes','Status'];
+            const rows = data.map(d => [
+                new Date(d.date).toLocaleDateString(),
+                d.type || '', d.name || '', d.phone || '', d.email || '',
+                d.carMake || '', d.carModel || '', d.year || '',
+                d.service || '', d.preferredDate || '', d.notes || '', d.status || ''
+            ]);
+            const csv = [headers, ...rows].map(r => r.map(c => `"${(c+'').replace(/"/g,'""')}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'servisus_enquiries.csv'; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Enter key on login
+        document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key === 'Enter') login(); });
+    </script>
+</body>
+</html>
